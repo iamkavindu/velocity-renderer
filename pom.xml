@@ -83,7 +83,7 @@
                 <configuration>
                     <image>
                         <env>
-                            <JAVA_TOOL_OPTIONS>-XX:+UseZGC</JAVA_TOOL_OPTIONS>
+                            <JAVA_TOOL_OPTIONS>-XX:+UseSerialGC -XX:+UseContainerSupport -XX:+MaxRAMPercentage=60</JAVA_TOOL_OPTIONS>
                             <BP_JVM_VERSION>25</BP_JVM_VERSION>
                             <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
                             <BP_SPRING_AOT_ENABLED>true</BP_SPRING_AOT_ENABLED>
