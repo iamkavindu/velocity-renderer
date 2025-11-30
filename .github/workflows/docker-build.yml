@@ -154,15 +154,6 @@ jobs:
           # Convert repository owner to lowercase for GHCR
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           
-          # Authenticate with Fly.io
-          echo "$FLY_API_TOKEN" | flyctl auth token
-          
-          # Check if app exists, create if it doesn't
-          if ! flyctl apps list | grep -q "velocity-renderer"; then
-            echo "App doesn't exist, creating..."
-            flyctl apps create velocity-renderer --org personal
-          fi
-          
           # Deploy the image from GHCR to Fly.io
           flyctl deploy --image ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
           
