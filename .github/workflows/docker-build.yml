@@ -126,3 +126,38 @@ jobs:
           echo "# Pull latest" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${OWNER_LC}/velocity-renderer:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Deploy to Fly.io
+  deploy-to-fly:
+    name: Deploy to Fly.io
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Remove 'v' prefix if present (e.g., v1.0.0 -> 1.0.0)
+          VERSION=${{ github.ref_name }}
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+      
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      
+      - name: Deploy to Fly.io
+        run: |
+          # Convert repository owner to lowercase for GHCR
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Deploy the image from GHCR to Fly.io
+          flyctl deploy --image ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
+          
+          echo "✅ Successfully deployed to Fly.io:"
+          echo "  - Image: ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
