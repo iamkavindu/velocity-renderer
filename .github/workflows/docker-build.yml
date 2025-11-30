@@ -17,9 +17,9 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       
       - name: Verify tag is on release branch
         id: verify
@@ -49,9 +49,9 @@ jobs:
       
       - name: Set up Java 25
         if: steps.verify.outputs.proceed == 'true'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
-          distribution: 'oracle'
+          distribution: 'adopt'
           java-version: '25'
           cache: 'maven'
       
