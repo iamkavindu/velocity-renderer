@@ -1,0 +1,125 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build Native Image and Push to GHCR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Verify tag is on release branch
+        id: verify
+        run: |
+          # Get all branches containing this tag
+          BRANCHES=$(git branch -r --contains ${{ github.ref_name }})
+          echo "Branches containing tag: $BRANCHES"
+          
+          # Check if any branch matches release/* pattern
+          if echo "$BRANCHES" | grep -q "origin/release/"; then
+            echo "Tag is on a release branch"
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag is NOT on a release branch. Skipping build."
+            echo "proceed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Extract version from tag
+        if: steps.verify.outputs.proceed == 'true'
+        id: version
+        run: |
+          # Remove 'v' prefix if present (e.g., v1.0.0 -> 1.0.0)
+          VERSION=${{ github.ref_name }}
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+      
+      - name: Set up Java 25
+        if: steps.verify.outputs.proceed == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'oracle'
+          java-version: '25'
+          cache: 'maven'
+      
+      - name: Set up Docker Buildx
+        if: steps.verify.outputs.proceed == 'true'
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        if: steps.verify.outputs.proceed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build native Docker image
+        if: steps.verify.outputs.proceed == 'true'
+        run: |
+          mvn spring-boot:build-image -Pnative -Pproduction \
+            -Dspring-boot.build-image.imageName=velocity-renderer:build
+        env:
+          MAVEN_OPTS: "-Xmx4g"
+      
+      - name: Tag Docker images
+        if: steps.verify.outputs.proceed == 'true'
+        run: |
+          # Convert repository owner to lowercase for GHCR
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Tag with version
+          docker tag velocity-renderer:build ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
+          
+          # Tag with latest
+          docker tag velocity-renderer:build ghcr.io/${OWNER_LC}/velocity-renderer:latest
+          
+          echo "Tagged images:"
+          docker images | grep velocity-renderer
+      
+      - name: Push Docker images to GHCR
+        if: steps.verify.outputs.proceed == 'true'
+        run: |
+          # Convert repository owner to lowercase for GHCR
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Push version tag
+          docker push ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
+          
+          # Push latest tag
+          docker push ghcr.io/${OWNER_LC}/velocity-renderer:latest
+          
+          echo "✅ Successfully pushed images:"
+          echo "  - ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}"
+          echo "  - ghcr.io/${OWNER_LC}/velocity-renderer:latest"
+      
+      - name: Output image details
+        if: steps.verify.outputs.proceed == 'true'
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "### Docker Image Published 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** GitHub Container Registry (ghcr.io)" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Pull Commands:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull specific version" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${OWNER_LC}/velocity-renderer:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
