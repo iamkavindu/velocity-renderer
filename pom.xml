@@ -27,7 +27,7 @@
         <url/>
     </scm>
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <vaadin.version>24.9.6</vaadin.version>
     </properties>
     <dependencies>
@@ -85,6 +85,7 @@
                     <image>
                         <env>
                             <JAVA_TOOL_OPTIONS>-XX:+UseZGC</JAVA_TOOL_OPTIONS>
+                            <BP_JVM_VERSION>25</BP_JVM_VERSION>
                             <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
                             <BP_SPRING_AOT_ENABLED>true</BP_SPRING_AOT_ENABLED>
                             <BP_JVM_CDS_ENABLED>true</BP_JVM_CDS_ENABLED>
@@ -92,7 +93,7 @@
                             <BP_BINARY_COMPRESSION_METHOD>upx</BP_BINARY_COMPRESSION_METHOD>
                             <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:+ReportExceptionStackTraces --enable-https --enable-http</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
-                        <builder>bellsoft/buildpacks.builder:musl</builder>
+                        <builder>paketobuildpacks/builder-noble-java-tiny</builder>
                     </image>
                 </configuration>
                 <executions>
