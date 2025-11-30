@@ -19,11 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          fetch-depth: 0
       
       - name: Verify tag is on release branch
         id: verify
         run: |
+          # Fetch all remote branches to ensure we can check which branches contain this tag
+          git fetch --all
+          
           # Get all branches containing this tag
           BRANCHES=$(git branch -r --contains ${{ github.ref_name }})
           echo "Branches containing tag: $BRANCHES"
