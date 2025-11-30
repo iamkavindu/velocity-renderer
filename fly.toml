@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for velocity-renderer on 2025-11-30T22:43:50+05:30
+# fly.toml app configuration file generated for velocity-renderer on 2025-12-01T00:20:37+05:30
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -15,4 +15,6 @@ primary_region = 'bom'
   processes = ['app']
 
 [[vm]]
-  size = 'shared-cpu-1x'
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
