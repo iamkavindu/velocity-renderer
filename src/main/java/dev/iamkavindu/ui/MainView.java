@@ -34,27 +34,21 @@ import java.util.Map;
 @Route("")
 public class MainView extends VerticalLayout implements LocaleChangeObserver {
 
-    // Supported locales
     private static final Locale LOCALE_EN = Locale.ENGLISH;
     private static final Locale LOCALE_SI = Locale.forLanguageTag("si");
 
-    // Services (injected via constructor)
     private final TemplateRenderService templateRenderService;
     private final JsonParserService jsonParserService;
 
-    // Editor components
     private TextArea htmlEditor;
     private TextArea jsonEditor;
-    
-    // Preview components
+
     private IFrame previewFrame;
     private Checkbox jsToggle;
-    
-    // Action buttons
+
     private Button saveButton;
     private Button clearButton;
-    
-    // Locale selector
+
     private ComboBox<Locale> localeSelector;
 
     public MainView(TemplateRenderService templateRenderService,
@@ -65,7 +59,7 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         setSizeFull();
         setPadding(false);
         setSpacing(false);
-        
+
         initializeComponents();
         buildLayout();
         loadStoredContent();
@@ -81,7 +75,6 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
     }
 
     private void createEditors() {
-        // HTML Editor
         htmlEditor = new TextArea();
         htmlEditor.setLabel(getTranslation("ui.label.html.editor"));
         htmlEditor.setPlaceholder(getTranslation("ui.placeholder.html.editor"));
@@ -89,10 +82,8 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         htmlEditor.setValueChangeMode(ValueChangeMode.LAZY);
         htmlEditor.getStyle().set("font-family", "'Courier New', monospace");
         htmlEditor.getStyle().set("font-size", "14px");
-        // Add value change listener for automatic preview update
         htmlEditor.addValueChangeListener(e -> updatePreview());
 
-        // JSON Editor
         jsonEditor = new TextArea();
         jsonEditor.setLabel(getTranslation("ui.label.json.editor"));
         jsonEditor.setPlaceholder(getTranslation("ui.placeholder.json.editor"));
@@ -100,7 +91,6 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         jsonEditor.setValueChangeMode(ValueChangeMode.LAZY);
         jsonEditor.getStyle().set("font-family", "'Courier New', monospace");
         jsonEditor.getStyle().set("font-size", "14px");
-        // Add value change listener for automatic preview update
         jsonEditor.addValueChangeListener(e -> updatePreview());
     }
 
@@ -110,10 +100,7 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         previewFrame.getStyle().set("border", "1px solid var(--lumo-contrast-20pct)");
         previewFrame.getStyle().set("background", "white");
 
-        // Default: Sandboxed (no JavaScript execution)
         previewFrame.getElement().setAttribute("sandbox", "allow-same-origin");
-
-        // Set initial empty content
         previewFrame.getElement().setAttribute("srcdoc", getTranslation("ui.message.preview.default-message"));
     }
 
@@ -121,7 +108,7 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         saveButton = new Button(getTranslation("ui.button.save"));
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         saveButton.addClickListener(e -> saveToLocalStorage());
-        
+
         clearButton = new Button(getTranslation("ui.button.clear"));
         clearButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
         clearButton.addClickListener(e -> clearAll());
@@ -131,18 +118,14 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         jsToggle = new Checkbox(getTranslation("ui.toggle.javascript"));
         jsToggle.getStyle().set("color", "var(--lumo-error-text-color)");
         jsToggle.setValue(false);
-        
+
         jsToggle.addValueChangeListener(e -> {
             if (e.getValue()) {
-                // Allow scripts (user accepts risk)
                 previewFrame.getElement().setAttribute("sandbox", "allow-same-origin allow-scripts");
             } else {
-                // Disable scripts (safe mode)
                 previewFrame.getElement().setAttribute("sandbox", "allow-same-origin");
             }
             updatePreview();
-            
-            // Save the toggle state
             saveToLocalStorageJs(getTranslation("ui.storage.key.js"), String.valueOf(e.getValue()));
         });
     }
@@ -164,24 +147,21 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
             if (e.getValue() != null) {
                 getUI().ifPresent(ui -> {
                     ui.setLocale(e.getValue());
-                    // Save locale preference
-                    saveToLocalStorageJs(getTranslation("ui.storage.key.locale"), 
-                                       e.getValue().toLanguageTag());
+                    saveToLocalStorageJs(getTranslation("ui.storage.key.locale"),
+                            e.getValue().toLanguageTag());
                 });
             }
         });
     }
 
     private void buildLayout() {
-        // Left panel: Create nested vertical splits for 3 sections
         SplitLayout leftUpperMiddleSplit = new SplitLayout();
         leftUpperMiddleSplit.setOrientation(SplitLayout.Orientation.VERTICAL);
         leftUpperMiddleSplit.addToPrimary(htmlEditor);
         leftUpperMiddleSplit.addToSecondary(jsonEditor);
         leftUpperMiddleSplit.setSplitterPosition(55); // ~55% for HTML editor
         leftUpperMiddleSplit.setSizeFull();
-        
-        // Buttons and toggle layout
+
         HorizontalLayout buttonLayout = new HorizontalLayout();
         buttonLayout.setSpacing(true);
         buttonLayout.setPadding(true);
@@ -190,8 +170,7 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         buttonLayout.setFlexGrow(0, saveButton, clearButton, localeSelector);
         buttonLayout.setFlexGrow(1, jsToggle);
         buttonLayout.getStyle().set("flex-wrap", "wrap");
-        
-        // Container for middle section and buttons
+
         VerticalLayout leftPanel = new VerticalLayout();
         leftPanel.setSizeFull();
         leftPanel.setPadding(false);
@@ -199,73 +178,71 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         leftPanel.add(leftUpperMiddleSplit, buttonLayout);
         leftPanel.setFlexGrow(1, leftUpperMiddleSplit);
         leftPanel.setFlexGrow(0, buttonLayout);
-        
-        // Right panel: Preview frame
+
         Div rightPanel = new Div();
         rightPanel.setSizeFull();
         rightPanel.add(previewFrame);
-        
-        // Main vertical split: Left panel | Right panel
+
         SplitLayout mainSplit = new SplitLayout();
         mainSplit.setOrientation(SplitLayout.Orientation.HORIZONTAL);
         mainSplit.addToPrimary(leftPanel);
         mainSplit.addToSecondary(rightPanel);
-        mainSplit.setSplitterPosition(50); // 50/50 split
+        mainSplit.setSplitterPosition(50);
         mainSplit.setSizeFull();
-        
+
         add(mainSplit);
     }
 
     private void updatePreview() {
         String htmlTemplate = htmlEditor.getValue();
         String jsonString = jsonEditor.getValue();
-        
-        // Handle empty template case
+
         if (htmlTemplate == null || htmlTemplate.trim().isEmpty()) {
-            previewFrame.getElement().setAttribute("srcdoc", 
-                getTranslation("ui.message.preview.default-message"));
+            previewFrame.getElement()
+                    .setAttribute("srcdoc", getTranslation("ui.message.preview.default-message"));
             return;
         }
-        
+
         try {
-            // Parse JSON variables into context map
             Map<String, Object> context;
             if (jsonString == null || jsonString.trim().isEmpty()) {
-                // Empty JSON - use empty context
                 context = new HashMap<>();
             } else {
-                // Parse JSON using the service
                 context = jsonParserService.parseJsonToMap(jsonString);
             }
-            
-            // Render template with Velocity
+
             String renderedHtml = templateRenderService.render(htmlTemplate, context);
-            
-            // Update preview iframe with rendered content
+
             previewFrame.getElement().setAttribute("srcdoc", renderedHtml);
-            
+
         } catch (IllegalArgumentException e) {
-            // JSON parsing error
             showErrorNotification(getTranslation("ui.message.error.invalid-json.prefix") + e.getMessage());
-            // Show error in preview as well
+
             previewFrame.getElement().setAttribute("srcdoc",
-                "<html><body style='font-family: Arial, sans-serif; padding: 20px; color: #d32f2f;'>" +
-                "<h3>" + getTranslation("ui.message.error.json-parse.title") + "</h3>" +
-                "<p>" + escapeHtml(e.getMessage()) + "</p>" +
-                "</body></html>");
-                
+                    """
+                            <html>
+                                <body style='font-family: Arial, sans-serif; padding: 20px; color: #d32f2f;'>
+                                    <h3>%s</h3>
+                                    <p>%s</p>
+                                </body>
+                            </html>
+                            """.formatted(getTranslation("ui.message.error.json-parse.title"), escapeHtml(e.getMessage())));
+
         } catch (TemplateRenderException e) {
-            // Template rendering error
             showErrorNotification(getTranslation("ui.message.error.template") + e.getMessage());
-            // Show error in preview as well
+
             previewFrame.getElement().setAttribute("srcdoc",
-                "<html><body style='font-family: Arial, sans-serif; padding: 20px; color: #d32f2f;'>" +
-                "<h3>" + getTranslation("ui.message.error.template-render.title") + "</h3>" +
-                "<p>" + escapeHtml(e.getMessage()) + "</p>" +
-                "</body></html>");
+                    """
+                            <html>
+                                <body style='font-family: Arial, sans-serif; padding: 20px; color: #d32f2f;'>
+                                    <h3>%s</h3>
+                                    <p>%s</p>
+                                </body>
+                            </html>
+                            """.formatted(getTranslation("ui.message.error.template-render.title"), escapeHtml(e.getMessage())));
         }
     }
-    
+
     /**
      * Display error notification to the user
      */
@@ -273,7 +250,7 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         Notification notification = Notification.show(message, 5000, Notification.Position.TOP_CENTER);
         notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
     }
-    
+
     /**
      * Escape HTML special characters to prevent XSS in error messages
      */
@@ -282,25 +259,23 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
             return "";
         }
         return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&#x27;");
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;");
     }
 
     private void saveToLocalStorage() {
         String htmlContent = htmlEditor.getValue();
         String jsonContent = jsonEditor.getValue();
-        
+
         saveToLocalStorageJs(getTranslation("ui.storage.key.html"), htmlContent != null ? htmlContent : "");
         saveToLocalStorageJs(getTranslation("ui.storage.key.json"), jsonContent != null ? jsonContent : "");
         saveToLocalStorageJs(getTranslation("ui.storage.key.js"), String.valueOf(jsToggle.getValue()));
-        
-        // Show feedback
+
         saveButton.setText(getTranslation("ui.button.saved"));
         saveButton.setEnabled(false);
-        
-        // Reset button after a delay
+
         new Thread(() -> {
             try {
                 Thread.sleep(2000);
@@ -318,11 +293,11 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         htmlEditor.clear();
         jsonEditor.clear();
         jsToggle.setValue(false);
-        
+
         removeFromLocalStorageJs(getTranslation("ui.storage.key.html"));
         removeFromLocalStorageJs(getTranslation("ui.storage.key.json"));
         removeFromLocalStorageJs(getTranslation("ui.storage.key.js"));
-        
+
         updatePreview();
     }
 
@@ -334,15 +309,13 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
                 updatePreview();
             }
         });
-        
-        // Load JSON content
+
         getFromLocalStorageJs(getTranslation("ui.storage.key.json"), value -> {
             if (value != null && !value.isEmpty()) {
                 jsonEditor.setValue(value);
             }
         });
-        
-        // Load JavaScript toggle state
+
         getFromLocalStorageJs(getTranslation("ui.storage.key.js"), value -> {
             if (value != null && !value.isEmpty()) {
                 jsToggle.setValue(Boolean.parseBoolean(value));
@@ -351,7 +324,6 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
     }
 
     private void loadStoredLocale() {
-        // Load stored locale preference from localStorage
         getFromLocalStorageJs(getTranslation("ui.storage.key.locale"), value -> {
             if (value != null && !value.isEmpty()) {
                 try {
@@ -367,23 +339,23 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
         });
     }
 
-    // Helper methods for localStorage access via JavaScript
     private void saveToLocalStorageJs(String key, String value) {
-        UI.getCurrent().getPage().executeJs(
-            "localStorage.setItem($0, $1)", key, value
-        );
+        UI.getCurrent()
+                .getPage()
+                .executeJs("localStorage.setItem($0, $1)", key, value);
     }
 
     private void removeFromLocalStorageJs(String key) {
-        UI.getCurrent().getPage().executeJs(
-            "localStorage.removeItem($0)", key
-        );
+        UI.getCurrent()
+                .getPage()
+                .executeJs("localStorage.removeItem($0)", key);
     }
 
     private void getFromLocalStorageJs(String key, ValueCallback callback) {
-        UI.getCurrent().getPage().executeJs(
-            "return localStorage.getItem($0)", key
-        ).then(String.class, callback::onValue);
+        UI.getCurrent()
+                .getPage()
+                .executeJs("return localStorage.getItem($0)", key)
+                .then(String.class, callback::onValue);
     }
 
     @FunctionalInterface
@@ -393,20 +365,19 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
 
     @Override
     public void localeChange(LocaleChangeEvent event) {
-        // Update all UI component labels and texts when locale changes
         htmlEditor.setLabel(getTranslation("ui.label.html.editor"));
         htmlEditor.setPlaceholder(getTranslation("ui.placeholder.html.editor"));
-        
+
         jsonEditor.setLabel(getTranslation("ui.label.json.editor"));
         jsonEditor.setPlaceholder(getTranslation("ui.placeholder.json.editor"));
-        
+
         saveButton.setText(getTranslation("ui.button.save"));
         clearButton.setText(getTranslation("ui.button.clear"));
-        
+
         jsToggle.setLabel(getTranslation("ui.toggle.javascript"));
-        
+
         localeSelector.setLabel(getTranslation("ui.locale.selector.label"));
-        // Refresh locale selector item labels
+
         localeSelector.setItemLabelGenerator(locale -> {
             if (locale.equals(LOCALE_EN)) {
                 return getTranslation("ui.locale.en");
@@ -415,19 +386,13 @@ public class MainView extends VerticalLayout implements LocaleChangeObserver {
             }
             return locale.getDisplayName(locale);
         });
-        
-        // Update preview if editors are empty (showing default message)
-        // or if there's content (to update error messages in new language)
+
         String htmlContent = htmlEditor.getValue();
         String jsonContent = jsonEditor.getValue();
-        
-        if ((htmlContent == null || htmlContent.trim().isEmpty()) && 
-            (jsonContent == null || jsonContent.trim().isEmpty())) {
-            // Editors are empty - update to show default message in new language
-            previewFrame.getElement().setAttribute("srcdoc", 
-                getTranslation("ui.message.preview.default-message"));
+
+        if ((htmlContent == null || htmlContent.trim().isEmpty()) && (jsonContent == null || jsonContent.trim().isEmpty())) {
+            previewFrame.getElement().setAttribute("srcdoc", getTranslation("ui.message.preview.default-message"));
         } else {
-            // Editors have content - re-render to update any error messages
             updatePreview();
         }
     }
