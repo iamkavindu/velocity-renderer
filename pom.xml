@@ -74,6 +74,10 @@
                 <configuration>
                     <buildArgs>
                         <buildArg>-Os</buildArg>
+                        <buildArg>-J-Xmx4g</buildArg>
+                        <buildArg>-R:MaxHeapSize=256m</buildArg>
+                        <buildArg>-R:MinHeapSize=64m</buildArg>
+                        <buildArg>-R:MaxNewSize=128m</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>
@@ -83,14 +87,14 @@
                 <configuration>
                     <image>
                         <env>
-                            <JAVA_TOOL_OPTIONS>-XX:+UseSerialGC -XX:+UseContainerSupport -XX:+MaxRAMPercentage=60</JAVA_TOOL_OPTIONS>
+                            <JAVA_TOOL_OPTIONS>-XX:+UseSerialGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=50</JAVA_TOOL_OPTIONS>
                             <BP_JVM_VERSION>25</BP_JVM_VERSION>
                             <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
                             <BP_SPRING_AOT_ENABLED>true</BP_SPRING_AOT_ENABLED>
                             <BP_JVM_CDS_ENABLED>true</BP_JVM_CDS_ENABLED>
                             <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
                             <BP_BINARY_COMPRESSION_METHOD>upx</BP_BINARY_COMPRESSION_METHOD>
-                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:+ReportExceptionStackTraces --enable-https --enable-http</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:+ReportExceptionStackTraces --enable-https --enable-http -R:MaxHeapSize=256m -R:MinHeapSize=64m -R:MaxNewSize=128m</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
                         <builder>paketobuildpacks/builder-noble-java-tiny</builder>
                     </image>
