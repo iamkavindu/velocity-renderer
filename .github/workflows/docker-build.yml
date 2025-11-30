@@ -24,19 +24,12 @@ jobs:
       - name: Verify tag is on release branch
         id: verify
         run: |
-          # Fetch all remote branches to ensure we can check which branches contain this tag
           git fetch --all
-          
-          # Get all branches containing this tag
           BRANCHES=$(git branch -r --contains ${{ github.ref_name }})
-          echo "Branches containing tag: $BRANCHES"
           
-          # Check if any branch matches release/* pattern
           if echo "$BRANCHES" | grep -q "origin/release/"; then
-            echo "Tag is on a release branch"
             echo "proceed=true" >> $GITHUB_OUTPUT
           else
-            echo "Tag is NOT on a release branch. Skipping build."
             echo "proceed=false" >> $GITHUB_OUTPUT
           fi
       
@@ -44,11 +37,9 @@ jobs:
         if: steps.verify.outputs.proceed == 'true'
         id: version
         run: |
-          # Remove 'v' prefix if present (e.g., v1.0.0 -> 1.0.0)
           VERSION=${{ github.ref_name }}
           VERSION=${VERSION#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
       
       - name: Set up Java 25
         if: steps.verify.outputs.proceed == 'true'
@@ -81,52 +72,17 @@ jobs:
       - name: Tag Docker images
         if: steps.verify.outputs.proceed == 'true'
         run: |
-          # Convert repository owner to lowercase for GHCR
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          
-          # Tag with version
           docker tag velocity-renderer:build ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
-          
-          # Tag with latest
           docker tag velocity-renderer:build ghcr.io/${OWNER_LC}/velocity-renderer:latest
-          
-          echo "Tagged images:"
-          docker images | grep velocity-renderer
       
       - name: Push Docker images to GHCR
         if: steps.verify.outputs.proceed == 'true'
         run: |
-          # Convert repository owner to lowercase for GHCR
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          
-          # Push version tag
           docker push ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
-          
-          # Push latest tag
           docker push ghcr.io/${OWNER_LC}/velocity-renderer:latest
-          
-          echo "✅ Successfully pushed images:"
-          echo "  - ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}"
-          echo "  - ghcr.io/${OWNER_LC}/velocity-renderer:latest"
       
-      - name: Output image details
-        if: steps.verify.outputs.proceed == 'true'
-        run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "### Docker Image Published 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Registry:** GitHub Container Registry (ghcr.io)" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### Pull Commands:" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "# Pull specific version" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "# Pull latest" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${OWNER_LC}/velocity-renderer:latest" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
   # Deploy to Fly.io
   deploy-to-fly:
     name: Deploy to Fly.io
@@ -137,27 +93,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       
-      - name: Extract version from tag
-        id: version
-        run: |
-          # Remove 'v' prefix if present (e.g., v1.0.0 -> 1.0.0)
-          VERSION=${{ github.ref_name }}
-          VERSION=${VERSION#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
-      
-      - name: Setup Flyctl
+      - name: Deploy to Fly.io
         uses: superfly/flyctl-actions/setup-flyctl@master
       
-      - name: Deploy to Fly.io
+      - name: Run deployment
         run: |
-          # Convert repository owner to lowercase for GHCR
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          
-          # Deploy the image from GHCR to Fly.io
-          flyctl deploy --image ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
-          
-          echo "✅ Successfully deployed to Fly.io:"
-          echo "  - Image: ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}"
+          VERSION=${{ github.ref_name }}
+          VERSION=${VERSION#v}
+          flyctl deploy --image ghcr.io/iamkavindu/velocity-renderer:${VERSION}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
