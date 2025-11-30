@@ -10,7 +10,7 @@
     </parent>
     <groupId>dev.iamkavindu</groupId>
     <artifactId>velocity-renderer</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>velocity-renderer</name>
     <description>velocity-renderer</description>
     <url/>
@@ -71,10 +71,37 @@
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>-Os</buildArg>
+                        <buildArg>--emit-build-report</buildArg>
+                    </buildArgs>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <image>
+                        <env>
+                            <JAVA_TOOL_OPTIONS>-XX:+UseZGC</JAVA_TOOL_OPTIONS>
+                            <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
+                            <BP_SPRING_AOT_ENABLED>true</BP_SPRING_AOT_ENABLED>
+                            <BP_JVM_CDS_ENABLED>true</BP_JVM_CDS_ENABLED>
+                            <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+                            <BP_BINARY_COMPRESSION_METHOD>upx</BP_BINARY_COMPRESSION_METHOD>
+                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:+ReportExceptionStackTraces --enable-https --enable-http</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                        </env>
+                        <builder>bellsoft/buildpacks.builder:musl</builder>
+                    </image>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>process-aot</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
