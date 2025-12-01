@@ -88,7 +88,7 @@
                             <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
                             <BP_SPRING_AOT_ENABLED>true</BP_SPRING_AOT_ENABLED>
                             <BP_JVM_CDS_ENABLED>true</BP_JVM_CDS_ENABLED>
-                            <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+<!--                            <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>-->
                             <BP_BINARY_COMPRESSION_METHOD>upx</BP_BINARY_COMPRESSION_METHOD>
                             <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:+ReportExceptionStackTraces --enable-https --enable-http</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>

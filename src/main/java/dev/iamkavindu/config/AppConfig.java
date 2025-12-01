@@ -1,5 +1,6 @@
 package dev.iamkavindu.config;
 
+import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,13 @@ public class AppConfig {
 
     @Bean
     public VelocityEngine velocityEngine() {
-        return new VelocityEngine();
+        VelocityEngine engine = new VelocityEngine();
+        engine.init();
+        return engine;
+    }
+
+    @Bean
+    public VelocityContext velocityContext() {
+        return new VelocityContext();
     }
 }
