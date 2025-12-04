@@ -3,13 +3,9 @@
 # ============================================================================
 # Builder Stage: Compile application with Vaadin frontend
 # ============================================================================
-FROM eclipse-temurin:25-jdk AS builder
+FROM bellsoft/liberica-openjdk-alpine:25 AS builder
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates binutils && \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache nodejs npm
 
 WORKDIR /build
 
@@ -18,50 +14,45 @@ COPY mvnw pom.xml ./
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
 COPY src/ src/
-RUN ./mvnw clean package -Pproduction -DskipTests && \
+RUN ./mvnw clean package -Pproduction -DskipTests -Dvaadin.ci.build=true && \
     mv target/velocity-renderer-*.jar target/app.jar
 
-WORKDIR /build/target
-RUN mkdir extracted && cd extracted && jar -xf ../app.jar
-
-RUN jdeps \
-      --ignore-missing-deps \
-      --print-module-deps \
-      --multi-release 25 \
-      -q \
-      --recursive \
-      --class-path "extracted/BOOT-INF/lib/*" \
-      extracted/BOOT-INF/classes \
-      > modules.txt 2>/dev/null || \
-    echo "java.base,java.logging,java.xml,java.desktop,java.management,java.naming,java.sql,java.net.http,java.security.jgss,jdk.unsupported,jdk.crypto.ec" > modules.txt
-
-RUN jlink \
-      --add-modules $(cat modules.txt) \
-      --strip-debug \
-      --no-man-pages \
-      --no-header-files \
-      --compress=zip-9 \
-      --output /javaruntime
-
 # ============================================================================
-# Runtime Stage: Google Distroless Java 25
+# Runtime Stage: Liberica JRE 25 Alpine
 # ============================================================================
-FROM gcr.io/distroless/base-debian12:nonroot
+FROM bellsoft/liberica-openjre-alpine:25
 
 LABEL org.opencontainers.image.title="Velocity Renderer" \
       org.opencontainers.image.description="Spring Boot + Vaadin application for Apache Velocity template rendering" \
       org.opencontainers.image.vendor="dev.iamkavindu" \
       maintainer="dev.iamkavindu"
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
 WORKDIR /app
 
-COPY --from=builder /javaruntime /opt/java
-COPY --from=builder /build/target/app.jar ./app.jar
+COPY --from=builder --chown=appuser:appgroup /build/target/app.jar ./app.jar
 
-ENV JAVA_HOME=/opt/java \
-    PATH="/opt/java/bin:${PATH}" \
-    JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+# Switch to non-root user
+USER appuser
+
+# Set production profile and JVM options optimized for containers
+ENV SPRING_PROFILES_ACTIVE=prod \
+    JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport \
+                       -XX:MaxRAMPercentage=75.0 \
+                       -XX:InitialRAMPercentage=50.0 \
+                       -XX:+ExitOnOutOfMemoryError \
+                       -XX:+UseG1GC \
+                       -XX:+UseStringDeduplication \
+                       -Djava.security.egd=file:/dev/./urandom \
+                       -Dfile.encoding=UTF-8"
 
 EXPOSE 8080
 
-ENTRYPOINT ["/opt/java/bin/java", "-jar", "/app/app.jar"]
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
