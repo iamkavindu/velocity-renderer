@@ -81,7 +81,8 @@ jobs:
             echo "Error: No tags found from metadata step"
             exit 1
           fi
-          TAGS=$(echo "$ORIGINAL_TAGS" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+          # Convert comma-separated to newlines, filter empty lines, sort/dedupe, rejoin
+          TAGS=$(echo "$ORIGINAL_TAGS" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "Deduplicated tags: $TAGS"
       
