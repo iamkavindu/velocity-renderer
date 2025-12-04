@@ -9,7 +9,7 @@ on:
 jobs:
   clean-ghcr:
     name: Clean GitHub Container Registry
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
     - uses: quartx-analytics/ghcr-cleaner@v1
