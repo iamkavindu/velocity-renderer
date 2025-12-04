@@ -27,14 +27,11 @@ jobs:
       - name: Verify tag is on release branch
         id: verify
         run: |
-          # Fetch all remote branches to ensure we can check which branches contain this tag
           git fetch --all
           
-          # Get all branches containing this tag
           BRANCHES=$(git branch -r --contains ${{ github.ref_name }})
           echo "Branches containing tag: $BRANCHES"
           
-          # Check if any branch matches release/* pattern
           if echo "$BRANCHES" | grep -q "origin/release/"; then
             echo "Tag is on a release branch"
             echo "proceed=true" >> $GITHUB_OUTPUT
@@ -62,10 +59,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/velocity-renderer
           tags: |
-            # Set version tag (strips 'v' prefix automatically for semver)
             type=semver,pattern={{version}}
-            # Set latest tag for release branches
-            type=raw,value=latest
           labels: |
             org.opencontainers.image.title=Velocity Renderer
             org.opencontainers.image.description=Spring Boot + Vaadin application for Apache Velocity template rendering
@@ -119,13 +113,11 @@ jobs:
       
       - name: Deploy to Fly.io
         run: |
-          # Check if app exists, create if it doesn't
           if ! flyctl apps list | grep -q "velocity-renderer"; then
             echo "App doesn't exist, creating..."
             flyctl apps create velocity-renderer --org personal
           fi
           
-          # Deploy using the version from build job
           flyctl deploy --image ghcr.io/${{ github.repository_owner }}/velocity-renderer:${{ needs.build-and-push.outputs.version }}
           
           echo "✅ Successfully deployed to Fly.io"
