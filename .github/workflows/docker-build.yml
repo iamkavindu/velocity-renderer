@@ -76,7 +76,12 @@ jobs:
         id: dedupe
         run: |
           # Split tags by newline, sort and remove duplicates, then rejoin
-          TAGS=$(echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+          ORIGINAL_TAGS="${{ steps.meta.outputs.tags }}"
+          if [ -z "$ORIGINAL_TAGS" ]; then
+            echo "Error: No tags found from metadata step"
+            exit 1
+          fi
+          TAGS=$(echo "$ORIGINAL_TAGS" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "Deduplicated tags: $TAGS"
       
