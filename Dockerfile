@@ -35,6 +35,10 @@ RUN jdeps \
       > modules.txt 2>/dev/null || \
     echo "java.base,java.logging,java.xml,java.desktop,java.management,java.naming,java.sql,java.net.http,java.security.jgss,jdk.unsupported,jdk.crypto.ec" > modules.txt
 
+RUN if ! grep -q "jdk.zipfs" modules.txt; then \
+      sed -i 's/$/,jdk.zipfs/' modules.txt; \
+    fi
+
 RUN jlink \
       --add-modules $(cat modules.txt) \
       --strip-debug \
