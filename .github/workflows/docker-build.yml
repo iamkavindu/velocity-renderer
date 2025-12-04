@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
-      image: ${{ steps.meta.outputs.tags }}
+      image: ${{ steps.dedupe.outputs.tags }}
     
     steps:
       - name: Checkout code
@@ -75,7 +75,7 @@ jobs:
         if: steps.verify.outputs.proceed == 'true'
         id: dedupe
         run: |
-          # Split tags by newline, sort and remove duplicates, then rejoin
+          # Split tags by comma, sort and remove duplicates, then rejoin
           ORIGINAL_TAGS="${{ steps.meta.outputs.tags }}"
           if [ -z "$ORIGINAL_TAGS" ]; then
             echo "Error: No tags found from metadata step"
