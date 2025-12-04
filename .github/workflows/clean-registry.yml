@@ -1,0 +1,20 @@
+name: Clean GHCR
+
+on:
+  workflow_run:
+    workflows: [ "Build and Push Docker Image" ]
+    types:
+      - completed
+
+jobs:
+  clean-ghcr:
+    name: Clean GitHub Container Registry
+    runs-on: ubuntu-slim
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+    - uses: quartx-analytics/ghcr-cleaner@v1
+      with:
+        owner-type: user
+        token: ${{ secrets.PAT_TOKEN }}
+        repository-owner: '${{ github.repository_owner }}'
+        delete-untagged: true
