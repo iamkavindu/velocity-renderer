@@ -71,6 +71,15 @@ jobs:
             org.opencontainers.image.description=Spring Boot + Vaadin application for Apache Velocity template rendering
             org.opencontainers.image.vendor=dev.iamkavindu
       
+      - name: Deduplicate Docker tags
+        if: steps.verify.outputs.proceed == 'true'
+        id: dedupe
+        run: |
+          # Split tags by newline, sort and remove duplicates, then rejoin
+          TAGS=$(echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "Deduplicated tags: $TAGS"
+      
       - name: Build and push Docker image
         if: steps.verify.outputs.proceed == 'true'
         uses: docker/build-push-action@v6
@@ -79,7 +88,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.dedupe.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -96,7 +105,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Tags:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.dedupe.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Pull Command:" >> $GITHUB_STEP_SUMMARY
