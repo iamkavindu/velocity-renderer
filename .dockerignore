@@ -1,46 +1,58 @@
-# flyctl launch added from .gitignore
-**\node_modules
-**\HELP.md
-**\target
-**\.mvn\wrapper\maven-wrapper.jar
-!**\**\src\main\**\target
-!**\**\src\test\**\target
+# Git files
+.git
+.gitignore
+.gitattributes
 
-### STS ###
-**\.apt_generated
-**\.classpath
-**\.factorypath
-**\.project
-**\.settings
-**\.springBeans
-**\.sts4-cache
+# Build artifacts
+target/
+!target/*.jar
+!target/dependency
 
-### IntelliJ IDEA ###
-**\.idea
-**\*.iws
-**\*.iml
-**\*.ipr
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
 
-### NetBeans ###
-nbproject\private
-nbbuild
-dist
-nbdist
-.nb-gradle
-**\build
-!**\**\src\main\**\build
-!**\**\src\test\**\build
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
 
-### VS Code ###
-**\.vscode
+# Documentation
+README.md
+HELP.md
+LICENSE
 
-# flyctl launch added from .idea\.gitignore
-# Default ignored files
-.idea\shelf
-.idea\workspace.xml
-# Editor-based HTTP Client requests
-.idea\httpRequests
-# Datasource local storage ignored files
-.idea\dataSources
-.idea\dataSources.local.xml
+# Test files
+src/test/
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+
+# Node modules (if any in root)
+node_modules/
+
+# Vaadin auto-generated frontend files (regenerated during build)
+src/main/frontend/generated/
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Deployment configs
 fly.toml

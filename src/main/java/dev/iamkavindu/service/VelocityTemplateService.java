@@ -1,7 +1,6 @@
-package dev.iamkavindu.service.impl;
+package dev.iamkavindu.service;
 
 import dev.iamkavindu.errors.TemplateRenderException;
-import dev.iamkavindu.service.TemplateRenderService;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.stereotype.Service;
@@ -15,43 +14,38 @@ import java.util.Map;
  * Configured for string-based template processing (not file-based).
  */
 @Service
-public class VelocityTemplateService implements TemplateRenderService {
-    
-    private final VelocityEngine velocityEngine;
+public class VelocityTemplateService {
 
-    public VelocityTemplateService(VelocityEngine velocityEngine) {
+    private final VelocityEngine velocityEngine;
+    private final VelocityContext velocityContext;
+
+    public VelocityTemplateService(VelocityEngine velocityEngine, VelocityContext velocityContext) {
         this.velocityEngine = velocityEngine;
+        this.velocityContext = velocityContext;
     }
-    
-    @Override
+
     public String render(String template, Map<String, Object> context) throws TemplateRenderException {
         if (template == null) {
             throw new TemplateRenderException("Template cannot be null");
         }
-        
+
         if (context == null) {
             throw new TemplateRenderException("Context cannot be null");
         }
-        
-        try {
-            VelocityContext velocityContext = new VelocityContext();
-            context.forEach(velocityContext::put);
 
-            StringWriter writer = new StringWriter();
+        context.forEach(velocityContext::put);
+        StringWriter writer = new StringWriter();
 
-            boolean success = velocityEngine.evaluate(
-                velocityContext, 
-                writer, 
-                "TemplateRenderer", 
+        boolean success = velocityEngine.evaluate(
+                velocityContext,
+                writer,
+                "TemplateRenderer",
                 template
-            );
-            
-            if (!success) {
-                throw new TemplateRenderException("Template evaluation failed");
-            }
-            return writer.toString();
-        } catch (Exception e) {
-            throw new TemplateRenderException("Failed to render template: " + e.getMessage(), e);
+        );
+
+        if (!success) {
+            throw new TemplateRenderException("Template evaluation failed");
         }
+        return writer.toString();
     }
 }

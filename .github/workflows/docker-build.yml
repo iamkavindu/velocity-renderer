@@ -12,42 +12,36 @@ permissions:
 
 jobs:
   build-and-push:
-    name: Build Native Image and Push to GHCR
+    name: Build Docker Image and Push to GHCR
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      image: ${{ steps.meta.outputs.tags }}
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
       - name: Verify tag is on release branch
         id: verify
         run: |
+          # Fetch all remote branches to ensure we can check which branches contain this tag
           git fetch --all
-          BRANCHES=$(git branch -r --contains ${{ github.ref_name }})
           
+          # Get all branches containing this tag
+          BRANCHES=$(git branch -r --contains ${{ github.ref_name }})
+          echo "Branches containing tag: $BRANCHES"
+          
+          # Check if any branch matches release/* pattern
           if echo "$BRANCHES" | grep -q "origin/release/"; then
+            echo "Tag is on a release branch"
             echo "proceed=true" >> $GITHUB_OUTPUT
           else
+            echo "Tag is NOT on a release branch. Skipping build."
             echo "proceed=false" >> $GITHUB_OUTPUT
           fi
-      
-      - name: Extract version from tag
-        if: steps.verify.outputs.proceed == 'true'
-        id: version
-        run: |
-          VERSION=${{ github.ref_name }}
-          VERSION=${VERSION#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      
-      - name: Set up Java 25
-        if: steps.verify.outputs.proceed == 'true'
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'adopt'
-          java-version: '25'
-          cache: 'maven'
       
       - name: Set up Docker Buildx
         if: steps.verify.outputs.proceed == 'true'
@@ -61,28 +55,55 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Build native Docker image
+      - name: Extract Docker metadata
+        if: steps.verify.outputs.proceed == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/velocity-renderer
+          tags: |
+            # Set version tag (strips 'v' prefix automatically for semver)
+            type=semver,pattern={{version}}
+            # Set latest tag for release branches
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Velocity Renderer
+            org.opencontainers.image.description=Spring Boot + Vaadin application for Apache Velocity template rendering
+            org.opencontainers.image.vendor=dev.iamkavindu
+      
+      - name: Build and push Docker image
+        if: steps.verify.outputs.proceed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+      
+      - name: Output image details
         if: steps.verify.outputs.proceed == 'true'
         run: |
-          mvn spring-boot:build-image -Pnative -Pproduction \
-            -Dspring-boot.build-image.imageName=velocity-renderer:build
-        env:
-          MAVEN_OPTS: "-Xmx4g"
-      
-      - name: Tag Docker images
-        if: steps.verify.outputs.proceed == 'true'
-        run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          docker tag velocity-renderer:build ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
-          docker tag velocity-renderer:build ghcr.io/${OWNER_LC}/velocity-renderer:latest
-      
-      - name: Push Docker images to GHCR
-        if: steps.verify.outputs.proceed == 'true'
-        run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          docker push ghcr.io/${OWNER_LC}/velocity-renderer:${{ steps.version.outputs.version }}
-          docker push ghcr.io/${OWNER_LC}/velocity-renderer:latest
-      
+          echo "### Docker Image Published 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** GitHub Container Registry (ghcr.io)" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Tags:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Pull Command:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/velocity-renderer:${{ steps.meta.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
   # Deploy to Fly.io
   deploy-to-fly:
     name: Deploy to Fly.io
@@ -91,15 +112,22 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+      
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@v1
       
       - name: Deploy to Fly.io
-        uses: superfly/flyctl-actions/setup-flyctl@master
-      
-      - name: Run deployment
         run: |
-          VERSION=${{ github.ref_name }}
-          VERSION=${VERSION#v}
-          flyctl deploy --image ghcr.io/iamkavindu/velocity-renderer:${VERSION}
+          # Check if app exists, create if it doesn't
+          if ! flyctl apps list | grep -q "velocity-renderer"; then
+            echo "App doesn't exist, creating..."
+            flyctl apps create velocity-renderer --org personal
+          fi
+          
+          # Deploy using the version from build job
+          flyctl deploy --image ghcr.io/${{ github.repository_owner }}/velocity-renderer:${{ needs.build-and-push.outputs.version }}
+          
+          echo "✅ Successfully deployed to Fly.io"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
